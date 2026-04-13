@@ -8,7 +8,6 @@ def clean_ticker(text: str) -> str:
     return (text or "").strip().upper()
 
 
-
 def format_number(value: float | None) -> str:
     """Format large numbers for display."""
     if value is None:
@@ -24,13 +23,11 @@ def format_number(value: float | None) -> str:
     return f"${value:,.2f}"
 
 
-
 def format_percentage(value: float | None) -> str:
     """Format a ratio as a percentage."""
     if value is None:
         return "Not available"
     return f"{value:.2%}"
-
 
 
 def get_status_label(status: str) -> str:
@@ -43,7 +40,6 @@ def get_status_label(status: str) -> str:
     return mapping.get(status, status.title())
 
 
-
 def combine_notes(first_list: list[str], second_list: list[str]) -> list[str]:
     """Combine note lists without duplicates."""
     merged: list[str] = []
@@ -51,7 +47,6 @@ def combine_notes(first_list: list[str], second_list: list[str]) -> list[str]:
         if note and note not in merged:
             merged.append(note)
     return merged
-
 
 
 def create_plain_english_explanation(
@@ -66,8 +61,8 @@ def create_plain_english_explanation(
     if final_verdict == "Non-compliant":
         return (
             f"{company_name} was marked as Non-compliant because it failed at least one "
-            "part of the methodology. Please review the business activity result and "
-            "financial ratio checks shown above."
+            "part of the methodology. Please review the business activity, income screen, "
+            "and financial ratio checks shown above."
         )
 
     if final_verdict == "Insufficient data":
@@ -81,7 +76,7 @@ def create_plain_english_explanation(
         return (
             f"{company_name} passed this simple MVP methodology. That means its sector "
             "and industry did not trigger the placeholder prohibited keyword screen, and "
-            "the available financial ratios passed the configured thresholds."
+            "the available income and financial checks passed the configured thresholds."
         )
 
     return (

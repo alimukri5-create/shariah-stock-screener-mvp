@@ -8,7 +8,9 @@ Important: this is a **methodology-based prototype tool**, not a fatwa or religi
 
 - Lets you enter one US stock ticker
 - Fetches basic company and financial data from Yahoo Finance
+- Fetches best-effort income-screen data from SEC EDGAR
 - Runs a simple business activity screen
+- Runs a best-effort income generation screen from SEC filing facts
 - Runs simple financial ratio checks
 - Shows a final result:
   - `Compliant`
@@ -18,7 +20,10 @@ Important: this is a **methodology-based prototype tool**, not a fatwa or religi
 ## Important limitations
 
 - This app uses **Yahoo Finance via `yfinance`** for prototype purposes.
+- This app also uses **SEC EDGAR JSON APIs** for best-effort filing-based income checks.
 - Yahoo Finance is convenient for beginners, but it is **not an official institutional data feed**.
+- The SEC income screen only works when the company filing exposes usable XBRL facts.
+- If the SEC data does not expose a clean interest-income line item, the app will show `Insufficient data` instead of guessing.
 - Some tickers may have missing, delayed, or incomplete fields.
 - The business activity screen is only a **placeholder** based on sector and industry text.
 - Detailed revenue-level screening is **not implemented yet**.
@@ -28,6 +33,7 @@ Important: this is a **methodology-based prototype tool**, not a fatwa or religi
 
 - `app.py` = Streamlit user interface
 - `data_fetcher.py` = gets stock data
+- `sec_parser.py` = fetches best-effort SEC filing facts
 - `screener.py` = runs the screening logic
 - `methodology.py` = stores the screening rules and thresholds
 - `utils.py` = helper functions
@@ -59,6 +65,18 @@ cd "C:\Users\ali_m\OneDrive\Documents\New project"
 pip install -r requirements.txt
 ```
 
+### 3b. Recommended for SEC access
+
+The SEC asks apps to send a declared user agent.
+
+You can set one in PowerShell like this:
+
+```powershell
+$env:SEC_USER_AGENT="ShariahStockScreenerMVP your-email@example.com"
+```
+
+If you do not set this, the app uses a fallback value, but setting your own contact value is better and more aligned with SEC guidance.
+
 ### 4. Run the app
 
 ```powershell
@@ -83,6 +101,7 @@ Open that link in your browser.
    - methodology used
    - business activity screen
    - financial ratio screen
+   - income generation screen
    - final verdict
    - limitations and disclaimer
 
@@ -95,6 +114,7 @@ If you enter `AAPL`, the app should:
 - fetch Apple company data
 - show the methodology used
 - calculate available ratios
+- try to find interest income and revenue from recent SEC filing facts
 - return a final verdict based on the configured rules
 
 ### Example 2: invalid ticker
@@ -146,6 +166,7 @@ Streamlit Cloud will install the packages from `requirements.txt` and run the ap
 The MVP includes:
 
 - a simple business activity screen using sector and industry keywords
+- a best-effort SEC filing income screen using reported XBRL facts
 - financial thresholds stored in `methodology.py`
 
 The thresholds are easy to edit later in one place.

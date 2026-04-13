@@ -62,10 +62,15 @@ def get_default_methodology() -> dict:
                 },
             ]
         },
+        "income_screen": {
+            "max_interest_income_ratio": 0.05,
+        },
         "limitations": [
             "Business activity screening is only a placeholder based on sector and industry text.",
             "Detailed revenue segmentation is not yet implemented.",
             "Yahoo Finance data may be incomplete, delayed, unofficial, or missing for some tickers.",
+            "SEC income screening is best-effort and only works when the filing exposes usable XBRL facts.",
+            "This app cannot reliably detect every form of non-compliant income from statements alone.",
             "If important values are missing, the app will return Insufficient data instead of guessing.",
         ],
     }

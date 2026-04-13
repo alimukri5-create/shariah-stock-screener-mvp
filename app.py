@@ -16,7 +16,6 @@ from utils import (
 st.set_page_config(page_title="Shariah Stock Screener")
 
 
-
 def show_ratio_table(ratio_results: list[dict]) -> None:
     """Display ratio checks in a small beginner-friendly table."""
     if not ratio_results:
@@ -38,13 +37,13 @@ def show_ratio_table(ratio_results: list[dict]) -> None:
     st.dataframe(table_rows, use_container_width=True, hide_index=True)
 
 
-
 def show_result(result: dict) -> None:
     """Render the screener result on the page."""
     company = result["company"]
     methodology = result["methodology"]
     business = result["business_screen"]
     financial = result["financial_screen"]
+    income = result["income_screen"]
 
     st.subheader("Result")
 
@@ -70,8 +69,41 @@ def show_result(result: dict) -> None:
     st.write(f"**Financial ratio screen:** {get_status_label(financial['status'])}")
     st.write(financial["note"])
 
+    st.write(f"**Income generation screen:** {get_status_label(income['status'])}")
+    st.write(income["note"])
+
     st.subheader("Ratio Values")
     show_ratio_table(financial["ratio_results"])
+
+    st.subheader("Income Screen Details")
+    st.write(f"**Threshold:** {income['threshold_label']}")
+    st.write(
+        {
+            "Interest income fact": (
+                income["interest_income_fact"]["label"]
+                if income.get("interest_income_fact")
+                else "Not found"
+            ),
+            "Interest income value": format_number(
+                income["interest_income_fact"]["value"]
+                if income.get("interest_income_fact")
+                else None
+            ),
+            "Revenue fact": (
+                income["revenue_fact"]["label"]
+                if income.get("revenue_fact")
+                else "Not found"
+            ),
+            "Revenue value": format_number(
+                income["revenue_fact"]["value"]
+                if income.get("revenue_fact")
+                else None
+            ),
+            "Interest income / Revenue": format_percentage(
+                income.get("interest_income_ratio")
+            ),
+        }
+    )
 
     st.subheader("Plain-English Explanation")
     st.write(result["plain_english_explanation"])
@@ -99,7 +131,6 @@ def show_result(result: dict) -> None:
         )
 
 
-
 def main() -> None:
     """Build the Streamlit page."""
     st.title("Shariah Stock Screener MVP")
@@ -112,7 +143,7 @@ def main() -> None:
     run_screening = st.button("Run Screening")
 
     st.caption(
-        "Prototype data source: Yahoo Finance via yfinance. Some fields may be missing "
+        "Prototype data sources: Yahoo Finance and SEC EDGAR. Some fields may be missing "
         "or incomplete."
     )
 

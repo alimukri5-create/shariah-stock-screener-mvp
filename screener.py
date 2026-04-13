@@ -5,7 +5,6 @@ from __future__ import annotations
 from utils import combine_notes, create_plain_english_explanation
 
 
-
 def _check_business_activity(stock_data: dict, methodology: dict) -> dict:
     """Run a simple keyword-based business activity screen."""
     sector = (stock_data.get("sector") or "").lower()
@@ -39,7 +38,6 @@ def _check_business_activity(stock_data: dict, methodology: dict) -> dict:
             "revenue-based analysis."
         ),
     }
-
 
 
 def _calculate_ratio(stock_data: dict, ratio_rule: dict) -> dict:
@@ -86,7 +84,6 @@ def _calculate_ratio(stock_data: dict, ratio_rule: dict) -> dict:
     }
 
 
-
 def _build_threshold_label(ratio_rule: dict) -> str:
     """Convert threshold rules into a readable label."""
     if "max_threshold" in ratio_rule:
@@ -94,7 +91,6 @@ def _build_threshold_label(ratio_rule: dict) -> str:
     if "min_threshold" in ratio_rule:
         return f"Must be >= {ratio_rule['min_threshold']:.0%}"
     return "No threshold set"
-
 
 
 def _check_financial_screen(stock_data: dict, methodology: dict) -> dict:
@@ -124,15 +120,96 @@ def _check_financial_screen(stock_data: dict, methodology: dict) -> dict:
     }
 
 
+def _check_income_screen(stock_data: dict, methodology: dict) -> dict:
+    """Run a best-effort income screen using SEC XBRL facts."""
+    sec_income_data = stock_data.get("sec_income_data", {})
+    if sec_income_data.get("status") != "ok":
+        return {
+            "status": "unavailable",
+            "note": sec_income_data.get(
+                "message",
+                "SEC filing data was not available for the income screen.",
+            ),
+            "interest_income_fact": None,
+            "revenue_fact": None,
+            "interest_income_ratio": None,
+            "threshold_label": (
+                f"Must be <= {methodology['income_screen']['max_interest_income_ratio']:.0%}"
+            ),
+        }
+
+    interest_income_fact = sec_income_data.get("interest_income_fact")
+    revenue_fact = sec_income_data.get("revenue_fact")
+    threshold = methodology["income_screen"]["max_interest_income_ratio"]
+
+    if not interest_income_fact:
+        return {
+            "status": "unavailable",
+            "note": (
+                "No clear interest-income fact was found in the recent SEC XBRL data. "
+                "This does not prove the value is zero. It only means the parser could not "
+                "find a clean reported line item."
+            ),
+            "interest_income_fact": None,
+            "revenue_fact": revenue_fact,
+            "interest_income_ratio": None,
+            "threshold_label": f"Must be <= {threshold:.0%}",
+        }
+
+    if not revenue_fact or not revenue_fact.get("value"):
+        return {
+            "status": "unavailable",
+            "note": (
+                "Interest income was found in the SEC data, but a usable revenue figure was "
+                "not found, so the ratio could not be calculated safely."
+            ),
+            "interest_income_fact": interest_income_fact,
+            "revenue_fact": revenue_fact,
+            "interest_income_ratio": None,
+            "threshold_label": f"Must be <= {threshold:.0%}",
+        }
+
+    interest_income_ratio = interest_income_fact["value"] / revenue_fact["value"]
+    status = "pass" if interest_income_ratio <= threshold else "fail"
+
+    if status == "pass":
+        note = (
+            "A usable SEC interest-income fact and revenue fact were found, and the ratio "
+            "was within the current methodology threshold."
+        )
+    else:
+        note = (
+            "A usable SEC interest-income fact and revenue fact were found, and the ratio "
+            "was above the current methodology threshold."
+        )
+
+    return {
+        "status": status,
+        "note": note,
+        "interest_income_fact": interest_income_fact,
+        "revenue_fact": revenue_fact,
+        "interest_income_ratio": interest_income_ratio,
+        "threshold_label": f"Must be <= {threshold:.0%}",
+    }
+
 
 def screen_stock(stock_data: dict, methodology: dict) -> dict:
     """Run the full screening flow and return one simple result dictionary."""
     business_result = _check_business_activity(stock_data, methodology)
     financial_result = _check_financial_screen(stock_data, methodology)
+    income_result = _check_income_screen(stock_data, methodology)
 
-    if business_result["status"] == "fail" or financial_result["status"] == "fail":
+    if (
+        business_result["status"] == "fail"
+        or financial_result["status"] == "fail"
+        or income_result["status"] == "fail"
+    ):
         final_verdict = "Non-compliant"
-    elif business_result["status"] == "unavailable" or financial_result["status"] == "unavailable":
+    elif (
+        business_result["status"] == "unavailable"
+        or financial_result["status"] == "unavailable"
+        or income_result["status"] == "unavailable"
+    ):
         final_verdict = "Insufficient data"
     else:
         final_verdict = "Compliant"
@@ -160,6 +237,7 @@ def screen_stock(stock_data: dict, methodology: dict) -> dict:
         },
         "business_screen": business_result,
         "financial_screen": financial_result,
+        "income_screen": income_result,
         "final_verdict": final_verdict,
         "plain_english_explanation": create_plain_english_explanation(
             stock_data=stock_data,

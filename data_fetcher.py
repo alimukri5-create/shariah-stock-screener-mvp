@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 import yfinance as yf
-
+from sec_parser import get_sec_income_data
 
 
 def _pick_first_number(*values: Any) -> float | None:
@@ -18,7 +18,6 @@ def _pick_first_number(*values: Any) -> float | None:
         if isinstance(value, (int, float)) and value is not None:
             return float(value)
     return None
-
 
 
 def _read_balance_sheet_value(stock: yf.Ticker, possible_labels: list[str]) -> float | None:
@@ -40,7 +39,6 @@ def _read_balance_sheet_value(stock: yf.Ticker, possible_labels: list[str]) -> f
                     return picked_value
 
     return None
-
 
 
 def get_stock_data(ticker: str) -> dict:
@@ -110,6 +108,9 @@ def get_stock_data(ticker: str) -> dict:
     if current_assets is None:
         current_assets = _read_balance_sheet_value(stock, ["Current Assets"])
 
+    sec_income_data = get_sec_income_data(ticker)
+    limitations.extend(sec_income_data.get("limitations", []))
+
     return {
         "status": "ok",
         "message": "Data fetched successfully.",
@@ -124,4 +125,5 @@ def get_stock_data(ticker: str) -> dict:
         "cash": cash,
         "total_assets": total_assets,
         "current_assets": current_assets,
+        "sec_income_data": sec_income_data,
     }
