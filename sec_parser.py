@@ -17,6 +17,32 @@ import requests
 
 SEC_TICKER_URL = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANY_FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
+NON_CORE_INCOME_CONCEPT_GROUPS = {
+    "interest_income": [
+        "InvestmentIncomeInterest",
+        "InterestAndOtherIncome",
+        "InterestIncomeOther",
+        "InterestIncomeOperating",
+        "InterestAndDividendIncomeOperating",
+        "InterestIncomeExpenseNonoperatingNet",
+    ],
+    "dividend_income": [
+        "DividendIncome",
+        "InvestmentIncomeDividend",
+        "InterestAndDividendIncomeOperating",
+        "InvestmentIncomeInterestAndDividend",
+    ],
+    "investment_income": [
+        "InvestmentIncomeInterestAndDividend",
+        "InvestmentIncome",
+        "OtherThanTemporaryImpairmentLossesInvestmentsPortionRecognizedInEarningsNet",
+    ],
+    "other_non_operating_income": [
+        "OtherNonoperatingIncome",
+        "NonoperatingIncomeExpense",
+        "OtherNonoperatingIncomeExpense",
+    ],
+}
 
 
 def _get_headers() -> dict:
@@ -97,6 +123,30 @@ def _get_fact_value(company_facts: dict, concept_names: list[str]) -> dict | Non
     return None
 
 
+def _get_matching_facts(
+    company_facts: dict,
+    concept_names: list[str],
+    category: str,
+) -> list[dict]:
+    """Return all matching latest facts for a concept list, without duplicates."""
+    matches = []
+    seen_concepts = set()
+
+    for concept_name in concept_names:
+        if concept_name in seen_concepts:
+            continue
+
+        fact = _get_fact_value(company_facts, [concept_name])
+        if not fact:
+            continue
+
+        fact["category"] = category
+        matches.append(fact)
+        seen_concepts.add(concept_name)
+
+    return matches
+
+
 def _get_cik_for_ticker(ticker: str) -> dict:
     """Look up the SEC CIK for a ticker symbol."""
     ticker_map = _get_json(SEC_TICKER_URL)
@@ -127,8 +177,9 @@ def get_sec_income_data(ticker: str) -> dict:
     """Fetch best-effort income-screen data from the SEC."""
     limitations = [
         "SEC income screening is best-effort and depends on which XBRL facts the company filed.",
-        "Some companies do not expose a clean interest-income fact in a way that can be screened automatically.",
+        "Some companies do not expose a clean interest-income or non-core-income fact in a way that can be screened automatically.",
         "A missing SEC fact does not prove the company has zero non-compliant income.",
+        "Some SEC concepts can overlap, so this MVP prioritizes one best candidate fact instead of summing everything.",
     ]
 
     try:
@@ -161,16 +212,13 @@ def get_sec_income_data(ticker: str) -> dict:
         ],
     )
 
-    interest_income_fact = _get_fact_value(
-        company_facts,
-        [
-            "InvestmentIncomeInterest",
-            "InterestAndDividendIncomeOperating",
-            "InterestAndOtherIncome",
-            "InterestIncomeOther",
-            "InterestIncomeOperating",
-        ],
-    )
+    non_core_income_facts = []
+    for category, concept_names in NON_CORE_INCOME_CONCEPT_GROUPS.items():
+        non_core_income_facts.extend(
+            _get_matching_facts(company_facts, concept_names, category)
+        )
+
+    selected_non_core_income_fact = non_core_income_facts[0] if non_core_income_facts else None
 
     return {
         "status": "ok",
@@ -179,5 +227,6 @@ def get_sec_income_data(ticker: str) -> dict:
         "cik": cik_result["cik"],
         "sec_company_name": cik_result.get("company_name"),
         "revenue_fact": revenue_fact,
-        "interest_income_fact": interest_income_fact,
+        "selected_non_core_income_fact": selected_non_core_income_fact,
+        "non_core_income_facts": non_core_income_facts,
     }

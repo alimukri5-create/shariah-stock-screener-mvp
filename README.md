@@ -23,7 +23,8 @@ Important: this is a **methodology-based prototype tool**, not a fatwa or religi
 - This app also uses **SEC EDGAR JSON APIs** for best-effort filing-based income checks.
 - Yahoo Finance is convenient for beginners, but it is **not an official institutional data feed**.
 - The SEC income screen only works when the company filing exposes usable XBRL facts.
-- If the SEC data does not expose a clean interest-income line item, the app will show `Insufficient data` instead of guessing.
+- The parser now checks more SEC concept types, including interest income, dividend income, investment income, and some non-operating income concepts.
+- If the SEC data does not expose a clean possible non-compliant income line item, the app will show `Insufficient data` instead of guessing.
 - Some tickers may have missing, delayed, or incomplete fields.
 - The business activity screen is only a **placeholder** based on sector and industry text.
 - Detailed revenue-level screening is **not implemented yet**.
@@ -114,7 +115,7 @@ If you enter `AAPL`, the app should:
 - fetch Apple company data
 - show the methodology used
 - calculate available ratios
-- try to find interest income and revenue from recent SEC filing facts
+- try to find possible non-core income and revenue from recent SEC filing facts
 - return a final verdict based on the configured rules
 
 ### Example 2: invalid ticker
@@ -166,7 +167,7 @@ Streamlit Cloud will install the packages from `requirements.txt` and run the ap
 The MVP includes:
 
 - a simple business activity screen using sector and industry keywords
-- a best-effort SEC filing income screen using reported XBRL facts
+- a best-effort SEC filing income screen using reported XBRL facts from a wider concept list
 - financial thresholds stored in `methodology.py`
 
 The thresholds are easy to edit later in one place.

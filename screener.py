@@ -130,29 +130,32 @@ def _check_income_screen(stock_data: dict, methodology: dict) -> dict:
                 "message",
                 "SEC filing data was not available for the income screen.",
             ),
-            "interest_income_fact": None,
+            "selected_non_core_income_fact": None,
+            "non_core_income_facts": [],
             "revenue_fact": None,
-            "interest_income_ratio": None,
+            "non_core_income_ratio": None,
             "threshold_label": (
-                f"Must be <= {methodology['income_screen']['max_interest_income_ratio']:.0%}"
+                f"Must be <= {methodology['income_screen']['max_non_core_income_ratio']:.0%}"
             ),
         }
 
-    interest_income_fact = sec_income_data.get("interest_income_fact")
+    selected_non_core_income_fact = sec_income_data.get("selected_non_core_income_fact")
+    non_core_income_facts = sec_income_data.get("non_core_income_facts", [])
     revenue_fact = sec_income_data.get("revenue_fact")
-    threshold = methodology["income_screen"]["max_interest_income_ratio"]
+    threshold = methodology["income_screen"]["max_non_core_income_ratio"]
 
-    if not interest_income_fact:
+    if not selected_non_core_income_fact:
         return {
             "status": "unavailable",
             "note": (
-                "No clear interest-income fact was found in the recent SEC XBRL data. "
+                "No clear non-core-income fact was found in the recent SEC XBRL data. "
                 "This does not prove the value is zero. It only means the parser could not "
                 "find a clean reported line item."
             ),
-            "interest_income_fact": None,
+            "selected_non_core_income_fact": None,
+            "non_core_income_facts": [],
             "revenue_fact": revenue_fact,
-            "interest_income_ratio": None,
+            "non_core_income_ratio": None,
             "threshold_label": f"Must be <= {threshold:.0%}",
         }
 
@@ -160,35 +163,37 @@ def _check_income_screen(stock_data: dict, methodology: dict) -> dict:
         return {
             "status": "unavailable",
             "note": (
-                "Interest income was found in the SEC data, but a usable revenue figure was "
-                "not found, so the ratio could not be calculated safely."
+                "A possible non-core-income fact was found in the SEC data, but a usable "
+                "revenue figure was not found, so the ratio could not be calculated safely."
             ),
-            "interest_income_fact": interest_income_fact,
+            "selected_non_core_income_fact": selected_non_core_income_fact,
+            "non_core_income_facts": non_core_income_facts,
             "revenue_fact": revenue_fact,
-            "interest_income_ratio": None,
+            "non_core_income_ratio": None,
             "threshold_label": f"Must be <= {threshold:.0%}",
         }
 
-    interest_income_ratio = interest_income_fact["value"] / revenue_fact["value"]
-    status = "pass" if interest_income_ratio <= threshold else "fail"
+    non_core_income_ratio = selected_non_core_income_fact["value"] / revenue_fact["value"]
+    status = "pass" if non_core_income_ratio <= threshold else "fail"
 
     if status == "pass":
         note = (
-            "A usable SEC interest-income fact and revenue fact were found, and the ratio "
-            "was within the current methodology threshold."
+            "A usable SEC possible non-core-income fact and revenue fact were found, and the "
+            "ratio was within the current methodology threshold."
         )
     else:
         note = (
-            "A usable SEC interest-income fact and revenue fact were found, and the ratio "
-            "was above the current methodology threshold."
+            "A usable SEC possible non-core-income fact and revenue fact were found, and the "
+            "ratio was above the current methodology threshold."
         )
 
     return {
         "status": status,
         "note": note,
-        "interest_income_fact": interest_income_fact,
+        "selected_non_core_income_fact": selected_non_core_income_fact,
+        "non_core_income_facts": non_core_income_facts,
         "revenue_fact": revenue_fact,
-        "interest_income_ratio": interest_income_ratio,
+        "non_core_income_ratio": non_core_income_ratio,
         "threshold_label": f"Must be <= {threshold:.0%}",
     }
 

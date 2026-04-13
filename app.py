@@ -79,14 +79,19 @@ def show_result(result: dict) -> None:
     st.write(f"**Threshold:** {income['threshold_label']}")
     st.write(
         {
-            "Interest income fact": (
-                income["interest_income_fact"]["label"]
-                if income.get("interest_income_fact")
+            "Selected possible non-compliant income fact": (
+                income["selected_non_core_income_fact"]["label"]
+                if income.get("selected_non_core_income_fact")
                 else "Not found"
             ),
-            "Interest income value": format_number(
-                income["interest_income_fact"]["value"]
-                if income.get("interest_income_fact")
+            "Selected fact category": (
+                income["selected_non_core_income_fact"].get("category", "Unknown")
+                if income.get("selected_non_core_income_fact")
+                else "Not found"
+            ),
+            "Selected fact value": format_number(
+                income["selected_non_core_income_fact"]["value"]
+                if income.get("selected_non_core_income_fact")
                 else None
             ),
             "Revenue fact": (
@@ -99,11 +104,17 @@ def show_result(result: dict) -> None:
                 if income.get("revenue_fact")
                 else None
             ),
-            "Interest income / Revenue": format_percentage(
-                income.get("interest_income_ratio")
+            "Possible non-compliant income / Revenue": format_percentage(
+                income.get("non_core_income_ratio")
             ),
         }
     )
+    if income.get("non_core_income_facts"):
+        st.write("**Other SEC candidate facts found:**")
+        for item in income["non_core_income_facts"]:
+            st.write(
+                f"- {item['label']} ({item['category']}): {format_number(item['value'])}"
+            )
 
     st.subheader("Plain-English Explanation")
     st.write(result["plain_english_explanation"])
