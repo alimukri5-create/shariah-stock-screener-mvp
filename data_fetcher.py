@@ -6,6 +6,8 @@ It is not an official institutional data feed.
 
 from __future__ import annotations
 
+import time
+from functools import lru_cache
 from typing import Any
 
 import yfinance as yf
@@ -41,6 +43,27 @@ def _read_balance_sheet_value(stock: yf.Ticker, possible_labels: list[str]) -> f
     return None
 
 
+def _safe_get_info(stock: yf.Ticker, max_attempts: int = 3) -> tuple[dict | None, str | None]:
+    """Fetch Yahoo info with small retries for temporary rate limits."""
+    last_error = None
+
+    for attempt in range(max_attempts):
+        try:
+            info = stock.info
+            if isinstance(info, dict) and info:
+                return info, None
+        except Exception as error:
+            last_error = str(error)
+            if "Too Many Requests" not in last_error and "Rate limited" not in last_error:
+                break
+
+        if attempt < max_attempts - 1:
+            time.sleep(attempt + 1)
+
+    return None, last_error
+
+
+@lru_cache(maxsize=128)
 def get_stock_data(ticker: str) -> dict:
     """Fetch raw company and financial fields for one ticker.
 
@@ -53,7 +76,7 @@ def get_stock_data(ticker: str) -> dict:
 
     try:
         stock = yf.Ticker(ticker)
-        info = stock.info
+        info, yahoo_error = _safe_get_info(stock)
     except Exception as error:
         return {
             "status": "error",
@@ -64,7 +87,32 @@ def get_stock_data(ticker: str) -> dict:
             "limitations": limitations,
         }
 
+    sec_income_data = get_sec_income_data(ticker)
+    limitations.extend(sec_income_data.get("limitations", []))
+
     if not isinstance(info, dict) or not info:
+        if yahoo_error and ("Too Many Requests" in yahoo_error or "Rate limited" in yahoo_error):
+            limitations.append(
+                "Yahoo Finance rate-limited this request. The app is showing whatever it could "
+                "still collect from SEC data."
+            )
+            return {
+                "status": "ok",
+                "message": "Partial data fetched successfully.",
+                "limitations": limitations,
+                "data_source": "SEC EDGAR with Yahoo Finance fallback unavailable",
+                "ticker": ticker,
+                "company_name": sec_income_data.get("sec_company_name") or ticker,
+                "sector": None,
+                "industry": None,
+                "market_cap": None,
+                "total_debt": None,
+                "cash": None,
+                "total_assets": None,
+                "current_assets": None,
+                "sec_income_data": sec_income_data,
+            }
+
         return {
             "status": "error",
             "message": (
@@ -108,8 +156,10 @@ def get_stock_data(ticker: str) -> dict:
     if current_assets is None:
         current_assets = _read_balance_sheet_value(stock, ["Current Assets"])
 
-    sec_income_data = get_sec_income_data(ticker)
-    limitations.extend(sec_income_data.get("limitations", []))
+    if yahoo_error and ("Too Many Requests" in yahoo_error or "Rate limited" in yahoo_error):
+        limitations.append(
+            "Yahoo Finance briefly rate-limited this request, but the app recovered enough data to continue."
+        )
 
     return {
         "status": "ok",

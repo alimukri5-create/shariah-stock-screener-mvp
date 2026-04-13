@@ -8,6 +8,8 @@ pretend to know unavailable details.
 from __future__ import annotations
 
 import os
+import time
+from functools import lru_cache
 from typing import Any
 
 import requests
@@ -35,9 +37,19 @@ def _get_headers() -> dict:
 
 def _get_json(url: str) -> dict | list:
     """Fetch JSON safely from the SEC."""
-    response = requests.get(url, headers=_get_headers(), timeout=20)
-    response.raise_for_status()
-    return response.json()
+    last_error = None
+
+    for attempt in range(3):
+        try:
+            response = requests.get(url, headers=_get_headers(), timeout=20)
+            response.raise_for_status()
+            return response.json()
+        except Exception as error:
+            last_error = error
+            if attempt < 2:
+                time.sleep(attempt + 1)
+
+    raise last_error
 
 
 def _pick_latest_fact(unit_items: list[dict[str, Any]]) -> dict | None:
@@ -110,6 +122,7 @@ def _get_cik_for_ticker(ticker: str) -> dict:
     }
 
 
+@lru_cache(maxsize=128)
 def get_sec_income_data(ticker: str) -> dict:
     """Fetch best-effort income-screen data from the SEC."""
     limitations = [
