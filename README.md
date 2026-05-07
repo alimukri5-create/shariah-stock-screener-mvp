@@ -1,183 +1,91 @@
-# Shariah Stock Screener MVP
+# AmanahScreen
 
-This is a beginner-friendly Streamlit app that checks one stock ticker at a time using a simple and transparent Shariah screening methodology.
+AmanahScreen is a Streamlit Shariah stock-screening app that returns one of three automatic verdicts:
 
-Important: this is a **methodology-based prototype tool**, not a fatwa or religious ruling.
+- `PASS`
+- `FAIL`
+- `REVIEW NEEDED`
 
-## What the app does
+It is designed as a verdict engine for normal investors, not a financial-data dashboard.
 
-- Lets you enter one US stock ticker
-- Fetches basic company and financial data from Yahoo Finance
-- Fetches best-effort income-screen data from SEC EDGAR
-- Runs a simple business activity screen
-- Runs a best-effort income generation screen from SEC filing facts
-- Runs simple financial ratio checks
-- Shows a final result:
-  - `Compliant`
-  - `Non-compliant`
-  - `Insufficient data`
+## What It Does
 
-## Important limitations
+- Screens one ticker at a time in the `Single Screen` tab.
+- Screens up to 50 tickers in the `Watchlist` tab.
+- Sorts watchlist results by verdict, confidence, missing data, or failing rule.
+- Exports watchlist results to CSV.
+- Shows raw ratio math, such as debt divided by market capitalization.
+- Explains which data source was used for each rule.
+- Uses SEC EDGAR as the primary source for US filing data.
+- Uses yfinance as an unofficial fallback for market cap, profile fields, and optional statement rows.
 
-- This app uses **Yahoo Finance via `yfinance`** for prototype purposes.
-- This app also uses **SEC EDGAR JSON APIs** for best-effort filing-based income checks.
-- Yahoo Finance is convenient for beginners, but it is **not an official institutional data feed**.
-- The SEC income screen only works when the company filing exposes usable XBRL facts.
-- The parser now checks more SEC concept types, including interest income, dividend income, investment income, and some non-operating income concepts.
-- If the SEC data does not expose a clean possible non-compliant income line item, the app will show `Insufficient data` instead of guessing.
-- Some tickers may have missing, delayed, or incomplete fields.
-- The business activity screen is only a **placeholder** based on sector and industry text.
-- Detailed revenue-level screening is **not implemented yet**.
-- This tool should not be treated as absolute religious certainty.
+## What It Does Not Do
 
-## Project files
+- It is not a fatwa.
+- It is not investment advice.
+- It does not use OpenAI, LLMs, paid APIs, cloud databases, API keys, or user accounts.
+- It does not allow manual debt, cash, revenue, market cap, or override inputs.
+- It does not let users force `PASS` or `FAIL`.
 
-- `app.py` = Streamlit user interface
-- `data_fetcher.py` = gets stock data
-- `sec_parser.py` = fetches best-effort SEC filing facts
-- `screener.py` = runs the screening logic
-- `methodology.py` = stores the screening rules and thresholds
-- `utils.py` = helper functions
-- `requirements.txt` = Python packages
+## Methodology
 
-## Local setup
+Default AAOIFI-style thresholds:
 
-### 1. Make sure Python is installed
+- Interest-bearing debt / market capitalization <= 30%
+- Cash plus interest-bearing securities / market capitalization <= 30%
+- Non-permissible income / total revenue <= 5%
 
-You need Python 3.10 or newer.
+The sidebar lets users adjust thresholds, conservative mode, finance lease treatment, and the unofficial financial fallback.
 
-To check:
+## Data Sources
 
-```powershell
-python --version
-```
+- SEC ticker-to-CIK mapping: `https://www.sec.gov/files/company_tickers.json`
+- SEC submissions API: `https://data.sec.gov/submissions/CIK##########.json`
+- SEC company facts API: `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json`
+- yfinance unofficial fallback for market cap, profile data, and financial statement rows when enabled.
 
-### 2. Open the project folder in your terminal
+## Why REVIEW NEEDED Is Not A Failure
 
-Example:
+`REVIEW NEEDED` means the app did not find enough automatic evidence to pass or fail the company. Missing critical evidence never becomes `PASS`.
+
+## Run Locally
 
 ```powershell
-cd "C:\Users\ali_m\OneDrive\Documents\New project"
-```
-
-### 3. Install the required packages
-
-```powershell
+python -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-### 3b. Recommended for SEC access
-
-The SEC asks apps to send a declared user agent.
-
-You can set one in PowerShell like this:
-
-```powershell
-$env:SEC_USER_AGENT="ShariahStockScreenerMVP your-email@example.com"
-```
-
-If you do not set this, the app uses a fallback value, but setting your own contact value is better and more aligned with SEC guidance.
-
-### 4. Run the app
-
-```powershell
 streamlit run app.py
 ```
 
-### 5. Open the local link
+macOS/Linux:
 
-Streamlit will show a local web address in the terminal, usually:
-
-```text
-http://localhost:8501
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-Open that link in your browser.
+Recommended SEC user agent:
 
-## How to use the app
+```powershell
+$env:SEC_USER_AGENT="AmanahScreen your-email@example.com"
+```
 
-1. Enter a ticker like `AAPL`
-2. Click `Run Screening`
-3. Read the result sections:
-   - methodology used
-   - business activity screen
-   - financial ratio screen
-   - income generation screen
-   - final verdict
-   - limitations and disclaimer
+## Deploy On Streamlit Community Cloud
 
-## Example behavior
+1. Open Streamlit Community Cloud.
+2. Connect this GitHub repository.
+3. Select branch `main`.
+4. Set main file path to `app.py`.
+5. Deploy.
 
-### Example 1: likely valid stock
+No paid data API keys are required.
 
-If you enter `AAPL`, the app should:
+## Limitations
 
-- fetch Apple company data
-- show the methodology used
-- calculate available ratios
-- try to find possible non-core income and revenue from recent SEC filing facts
-- return a final verdict based on the configured rules
-
-### Example 2: invalid ticker
-
-If you enter `NOTAREALSTOCK`, the app should:
-
-- not crash
-- show a clear error message
-- explain that no usable stock data was returned
-
-### Example 3: partial data
-
-If a ticker is missing important fields, the app should:
-
-- still show any data it could fetch
-- mark unavailable checks clearly
-- return `Insufficient data` when needed
-
-## Deploying on Streamlit Cloud
-
-### 1. Put this project in a GitHub repository
-
-Your repo should include:
-
-- `app.py`
-- `requirements.txt`
-- the other `.py` files
-
-### 2. Go to Streamlit Community Cloud
-
-Open:
-
-[https://share.streamlit.io/](https://share.streamlit.io/)
-
-### 3. Connect your GitHub repo
-
-Choose:
-
-- your repository
-- branch
-- main file: `app.py`
-
-### 4. Deploy
-
-Streamlit Cloud will install the packages from `requirements.txt` and run the app.
-
-## Notes about the current methodology
-
-The MVP includes:
-
-- a simple business activity screen using sector and industry keywords
-- a best-effort SEC filing income screen using reported XBRL facts from a wider concept list
-- financial thresholds stored in `methodology.py`
-
-The thresholds are easy to edit later in one place.
-
-## Next improvements after MVP
-
-- Add better business activity screening with segment revenue data
-- Add a more robust and scholarly configurable methodology
-- Add support for more exchanges and regions
-- Add a history of previous screenings
-- Add downloadable reports
-- Add unit tests
-- Replace Yahoo Finance with a stronger data provider
+- SEC coverage is strongest for US-listed public companies.
+- Segment-level prohibited revenue may not be available.
+- yfinance is unofficial and may be incomplete or delayed.
+- Different Shariah boards may use different thresholds and interpretations.
+- Missing data leads to `REVIEW NEEDED`, not `PASS`.
